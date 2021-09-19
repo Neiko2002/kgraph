@@ -262,9 +262,11 @@ namespace kgraph {
             for (unsigned &v: index) {
                 v = i++;
             }
-            random_shuffle(index.begin(), index.end());
+            std::random_device rd;
+            std::mt19937 gen{rd()};
+            std::shuffle(index.begin(), index.end(), gen);
 #pragma omp parallel for
-            for (unsigned i = 0; i < C; ++i) {
+            for (int64_t i = 0; i < C; ++i) {
                 controls[i].id = index[i];
                 LinearSearch(oracle, index[i], K, &controls[i].neighbors);
             }
@@ -703,7 +705,7 @@ namespace kgraph {
                 cerr << "Reranking edges..." << endl;
                 progress_display progress(graph.size(), cerr);
 #pragma omp parallel for
-                for (unsigned i = 0; i < graph.size(); ++i) {
+                for (int64_t i = 0; i < graph.size(); ++i) {
                     auto &v = graph[i];
                     std::sort(v.begin(), v.end());
                     v.resize(std::unique(v.begin(), v.end()) - v.begin());
@@ -788,7 +790,7 @@ namespace kgraph {
 #endif
                 vector<unsigned> random(params.S + 1);
 #pragma omp for
-                for (unsigned n = 0; n < N; ++n) {
+                for (int64_t n = 0; n < N; ++n) {
                     auto &nhood = nhoods[n];
                     Neighbors &pool = nhood.pool;
                     GenRandom(rng, &nhood.nn_new[0], nhood.nn_new.size(), N);
@@ -810,7 +812,7 @@ namespace kgraph {
         void join () {
             size_t cc = 0;
 #pragma omp parallel for default(shared) schedule(dynamic, 100) reduction(+:cc)
-            for (unsigned n = 0; n < oracle.size(); ++n) {
+            for (int64_t n = 0; n < oracle.size(); ++n) {
                 size_t uu = 0;
                 nhoods[n].found = false;
                 nhoods[n].join([&](unsigned i, unsigned j) {
@@ -827,6 +829,8 @@ namespace kgraph {
             n_comps += cc;
         }
         void update () {
+            std::random_device rd;
+            std::mt19937 gen{rd()};
             unsigned N = oracle.size();
             for (auto &nhood: nhoods) {
                 nhood.nn_new.clear();
@@ -837,7 +841,7 @@ namespace kgraph {
             }
             //!!! compute radius2
 #pragma omp parallel for
-            for (unsigned n = 0; n < N; ++n) {
+            for (int64_t n = 0; n < N; ++n) {
                 auto &nhood = nhoods[n];
                 if (nhood.found) {
                     unsigned maxl = std::min(nhood.M + params.S, nhood.L);
@@ -853,7 +857,7 @@ namespace kgraph {
                 nhood.radiusM = nhood.pool[nhood.M-1].dist;
             }
 #pragma omp parallel for
-            for (unsigned n = 0; n < N; ++n) {
+            for (int64_t n = 0; n < N; ++n) {
                 auto &nhood = nhoods[n];
                 auto &nn_new = nhood.nn_new;
                 auto &nn_old = nhood.nn_old;
@@ -883,12 +887,12 @@ namespace kgraph {
                 auto &rnn_new = nhoods[i].rnn_new;
                 auto &rnn_old = nhoods[i].rnn_old;
                 if (params.R && (rnn_new.size() > params.R)) {
-                    random_shuffle(rnn_new.begin(), rnn_new.end());
+                    std::shuffle(rnn_new.begin(), rnn_new.end(), gen);
                     rnn_new.resize(params.R);
                 }
                 nn_new.insert(nn_new.end(), rnn_new.begin(), rnn_new.end());
                 if (params.R && (rnn_old.size() > params.R)) {
-                    random_shuffle(rnn_old.begin(), rnn_old.end());
+                    std::shuffle(rnn_old.begin(), rnn_old.end(), gen);
                     rnn_old.resize(params.R);
                 }
                 nn_old.insert(nn_old.end(), rnn_old.begin(), rnn_old.end());

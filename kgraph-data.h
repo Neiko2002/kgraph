@@ -9,7 +9,6 @@
 #include <stdexcept>
 #include <boost/assert.hpp>
 
-#ifdef __GNUC__
 #ifdef __AVX__
 #define KGRAPH_MATRIX_ALIGN 32
 #else
@@ -17,7 +16,6 @@
 #define KGRAPH_MATRIX_ALIGN 16
 #else
 #define KGRAPH_MATRIX_ALIGN 4
-#endif
 #endif
 #endif
 
@@ -103,9 +101,10 @@ namespace kgraph {
             /*
             data.resize(row * stride);
             */
-            if (data) free(data);
-            data = (char *)memalign(A, row * stride); // SSE instruction needs data to be aligned
-            if (!data) throw runtime_error("memalign");
+            struct alignas(A) OverAligned { char b; };
+            if (data) delete[] data;
+            data = (char*) new OverAligned[row * stride];
+            if (!data) throw std::runtime_error("memalign");
         }
     public:
         Matrix (): col(0), row(0), stride(0), data(0) {}
@@ -113,7 +112,7 @@ namespace kgraph {
             reset(r, c);
         }
         ~Matrix () {
-            if (data) free(data);
+            if (data) delete[] data;
         }
         unsigned size () const {
             return row;
@@ -139,7 +138,7 @@ namespace kgraph {
 
         void normalize2 () {
 #pragma omp parallel for
-            for (unsigned i = 0; i < row; ++i) {
+            for (int64_t i = 0; i < row; ++i) {
                 T *p = operator[](i);
                 double sum = metric::l2sqr::norm2(p, col);
                 sum = std::sqrt(sum);
@@ -151,7 +150,7 @@ namespace kgraph {
         
         void load (const std::string &path, unsigned dim, unsigned skip = 0, unsigned gap = 0) {
             std::ifstream is(path.c_str(), std::ios::binary);
-            if (!is) throw io_error(path);
+            if (!is) throw std::runtime_error(path);
             is.seekg(0, std::ios::end);
             size_t size = is.tellg();
             size -= skip;
@@ -164,7 +163,7 @@ namespace kgraph {
                 is.read(&data[stride * i], sizeof(T) * dim);
                 is.seekg(gap, std::ios::cur);
             }
-            if (!is) throw io_error(path);
+            if (!is) throw std::runtime_error(path);
         }
 
         void load_lshkit (std::string const &path) {
@@ -172,8 +171,8 @@ namespace kgraph {
             std::ifstream is(path.c_str(), std::ios::binary);
             unsigned header[LSHKIT_HEADER]; /* entry size, row, col */
             is.read((char *)header, sizeof header);
-            if (!is) throw io_error(path);
-            if (header[0] != sizeof(T)) throw io_error(path);
+            if (!is) throw std::runtime_error(path);
+            if (header[0] != sizeof(T)) throw std::runtime_error(path);
             is.close();
             unsigned D = header[2];
             unsigned skip = LSHKIT_HEADER * sizeof(unsigned);
@@ -289,9 +288,9 @@ namespace kgraph {
         if (K == 0) {
             K = result.dim();
         }
-        if (!(gs.dim() >= K)) throw invalid_argument("gs.dim() >= K");
-        if (!(result.dim() >= K)) throw invalid_argument("result.dim() >= K");
-        if (!(gs.size() >= result.size())) throw invalid_argument("gs.size() > result.size()");
+        if (!(gs.dim() >= K)) throw std::invalid_argument("gs.dim() >= K");
+        if (!(result.dim() >= K)) throw std::invalid_argument("result.dim() >= K");
+        if (!(gs.size() >= result.size())) throw std::invalid_argument("gs.size() > result.size()");
         float sum = 0;
         for (unsigned i = 0; i < result.size(); ++i) {
             float const *gs_row = gs[i];
@@ -310,7 +309,7 @@ namespace kgraph {
                     ++re_n;
                 }
                 else {
-                    throw runtime_error("distance is unstable");
+                    throw std::runtime_error("distance is unstable");
                 }
             }
             sum += float(found) / K;

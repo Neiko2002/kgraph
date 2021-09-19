@@ -6,7 +6,6 @@
 #define KGRAPH_VALUE_TYPE float
 #endif
 
-#include <sys/time.h>
 #include <cctype>
 #include <random>
 #include <iomanip>
@@ -77,7 +76,12 @@ int main (int argc, char *argv[]) {
     p.add("output", 1);
 
     po::variables_map vm; 
-    po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
+    try {
+        po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
+    } catch (const boost::program_options::unknown_option& e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
     po::notify(vm); 
 
     if (vm.count("raw") == 1) {

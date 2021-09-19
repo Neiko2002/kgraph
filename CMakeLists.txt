@@ -1,29 +1,39 @@
-cmake_minimum_required (VERSION 2.6)
-project (KGRAPH)
+cmake_minimum_required(VERSION 3.15)
 
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -msse2 -O3 -std=c++11 -fPIC")
+project(KGRAPH VERSION 1.5)
 
-find_package(OpenMP REQUIRED)
-if (OPENMP_FOUND)
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-endif()
+set(CMAKE_POSITION_INDEPENDENT_CODE on)
+
+find_package(OpenMP REQUIRED COMPONENTS CXX)
 
 find_package(Boost REQUIRED COMPONENTS timer chrono system program_options)
 
 set(LIB_SRC kgraph.cpp metric.cpp)
-include_directories(${KGRAPH_SOURCE_DIR})
-add_library(kgraph SHARED ${LIB_SRC})
+
 add_library(kgrapha STATIC ${LIB_SRC})
+
+target_compile_features(kgrapha PUBLIC cxx_std_17)
+
+target_include_directories(kgrapha PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<INSTALL_INTERFACE:include>)
+
+target_compile_options(kgrapha PUBLIC $<$<CXX_COMPILER_ID:MSVC>:/arch:AVX2>
+                                      $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-march=native>)
+
+target_link_libraries(kgrapha PUBLIC OpenMP::OpenMP_CXX Boost::headers Boost::chrono Boost::system
+                                     Boost::program_options Boost::timer)
+
+target_compile_definitions(kgrapha PRIVATE KGRAPH_VERSION=${CMAKE_PROJECT_VERSION} KGRAPH_BUILD_NUMBER=1
+                                           KGRAPH_BUILD_ID=1)
+
 set_target_properties(kgrapha PROPERTIES OUTPUT_NAME kgraph)
 add_executable(index index.cpp)
 add_executable(search search.cpp)
 set(TOOLS index search)
 foreach(TOOL ${TOOLS})
-	target_link_libraries(${TOOL} kgrapha ${Boost_LIBRARIES} rt)
+    target_link_libraries(${TOOL} PRIVATE kgrapha)
 endforeach(TOOL)
-install (FILES kgraph.h kgraph-data.h DESTINATION include) 
-install (TARGETS kgraph kgrapha
-	 LIBRARY DESTINATION lib
-	 ARCHIVE DESTINATION lib)
+install(FILES kgraph.h kgraph-data.h DESTINATION include)
+install(
+    TARGETS kgrapha
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib)
