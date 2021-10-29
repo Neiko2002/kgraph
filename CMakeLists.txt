@@ -26,9 +26,14 @@ target_compile_definitions(kgrapha PRIVATE KGRAPH_VERSION=${CMAKE_PROJECT_VERSIO
                                            KGRAPH_BUILD_ID=1)
 
 set_target_properties(kgrapha PROPERTIES OUTPUT_NAME kgraph)
+
 add_executable(index index.cpp)
+add_executable(index_sift1m index_sift1m.cpp)
+add_executable(index_sift1m_evaluation index_sift1m_evaluation.cpp)
+add_executable(index_sift1m_stats index_sift1m_stats.cpp)
 add_executable(search search.cpp)
-set(TOOLS index search)
+
+set(TOOLS index index_sift1m index_sift1m_evaluation index_sift1m_stats search)
 foreach(TOOL ${TOOLS})
     target_link_libraries(${TOOL} PRIVATE kgrapha)
 endforeach(TOOL)

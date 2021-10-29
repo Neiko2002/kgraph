@@ -9,6 +9,7 @@
 #define WDONG_KGRAPH
 
 #include <stdexcept>
+#include <vector>
 
 namespace kgraph {
     static unsigned const default_iterations =  30;
@@ -225,6 +226,8 @@ namespace kgraph {
         virtual void get_nn (unsigned id, unsigned *nns, float *dists, unsigned *M, unsigned *L) const = 0;
 
         virtual void reverse (int) = 0;
+
+        virtual std::vector<std::vector<uint32_t>> getCompactGraph() = 0;
     };
 }
 

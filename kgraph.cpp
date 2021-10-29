@@ -293,6 +293,18 @@ namespace kgraph {
     public:
         virtual ~KGraphImpl () {
         }
+
+        vector<vector<uint32_t>> getCompactGraph() {
+            auto compact_graph = std::vector<std::vector<uint32_t>>(graph.size());
+            for (size_t n = 0; n < graph.size(); n++) {
+                auto& neighbors = graph[n];
+                auto& neighbor_ids = compact_graph[n];
+                for (size_t e = 0; e < neighbors.size(); e++) 
+                    neighbor_ids.push_back(neighbors[e].id);
+            }
+            return compact_graph;
+        }
+
         virtual void load (char const *path) {
             static_assert(sizeof(unsigned) == sizeof(uint32_t), "unsigned must be 32-bit");
             ifstream is(path, ios::binary);
